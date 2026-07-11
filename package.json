@@ -1,0 +1,18 @@
+{
+  "name": "aura-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "client": "npm run dev --workspace=client",
+    "server": "npm run dev --workspace=server",
+    "seed": "npm run seed --workspace=server",
+    "dev": "npx concurrently --kill-others \"npm run server\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
