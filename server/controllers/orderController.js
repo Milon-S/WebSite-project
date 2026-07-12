@@ -24,6 +24,7 @@ export const createOrder = async (req, res, next) => {
       discount,
       total,
       paymentIntentId,
+      paymentMethod,
       isPaid,
     } = req.body;
 
@@ -38,9 +39,8 @@ export const createOrder = async (req, res, next) => {
       try {
         const dbProduct = await Product.findById(item.productId);
         if (!dbProduct) {
-          return res
-            .status(404)
-            .json({ message: `Product not found: ${item.title} (${item.productId})` });
+          // Log warning but don't block the order — product may exist under a different ID format
+          console.warn(`[createOrder] Product not found in DB: ${item.title} (${item.productId}) — proceeding anyway`);
         }
       } catch (castErr) {
         // Non-ObjectId productId — skip DB check, trust the client data
@@ -59,6 +59,7 @@ export const createOrder = async (req, res, next) => {
       discount,
       total,
       paymentIntentId: paymentIntentId || '',
+      paymentMethod: paymentMethod || 'card',
       isPaid: isPaid || false,
       paidAt: isPaid ? new Date() : null,
     });

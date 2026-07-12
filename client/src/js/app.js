@@ -266,13 +266,14 @@ export function createOrderActions({
       discount,
       total,
       paymentIntentId: formData.paymentIntentId || '',
-      isPaid: !!formData.paymentIntentId,
+      isPaid: formData.paymentMethod === 'card' ? !!formData.paymentIntentId : false,
+      paymentMethod: formData.paymentMethod || 'card',
     };
 
     try {
       const result = await apiService.createOrder(orderData);
 
-      if (result.success) {
+      if (result && result.success) {
         setCart([]);
         setActivePromoCode('');
         localStorage.removeItem('aura_promo');
@@ -289,10 +290,12 @@ export function createOrderActions({
 
         onSuccess(canonicalEmail, result.orderId);
         return result;
+      } else {
+        throw new Error(result?.message || 'Order could not be placed. Please try again.');
       }
     } catch (err) {
       console.error('[placeOrder] Order submission failed:', err);
-      return null;
+      throw err; // Re-throw so Checkout.jsx can display the error message
     }
   };
 

@@ -77,7 +77,7 @@ export default function App() {
   const [searchQuery, setSearchQuery]     = useState('');
   const [activeRoute, setActiveRoute]     = useState('#home');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [maxPrice, setMaxPrice]           = useState(500);
+  const [maxPrice, setMaxPrice]           = useState(1500);
   const [sort, setSort]                   = useState('featured');
   const [activeProductId, setActiveProductId] = useState(null);
 
@@ -134,7 +134,7 @@ export default function App() {
       if (queryParams.maxprice) {
         setMaxPrice(parseFloat(queryParams.maxprice));
       } else {
-        setMaxPrice(500);
+        setMaxPrice(1500);
       }
 
       if (queryParams.sort) {
@@ -179,7 +179,7 @@ export default function App() {
 
     // Clean up empty parameters
     if (merged.category === 'all' || !merged.category) delete merged.category;
-    if (parseFloat(merged.maxprice) === 500 || !merged.maxprice) delete merged.maxprice;
+    if (parseFloat(merged.maxprice) >= 1500 || !merged.maxprice) delete merged.maxprice;
     if (merged.sort === 'featured' || !merged.sort) delete merged.sort;
     if (merged.q === '' || !merged.q) delete merged.q;
 

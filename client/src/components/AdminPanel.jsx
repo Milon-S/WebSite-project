@@ -561,6 +561,7 @@ export default function AdminPanel({ authUser, onUnauthorized, refetchProducts }
                         <th>Customer</th>
                         <th>Purchase items</th>
                         <th>Total Paid</th>
+                        <th>Payment</th>
                         <th>Status</th>
                         <th>Update Status</th>
                       </tr>
@@ -589,6 +590,25 @@ export default function AdminPanel({ authUser, onUnauthorized, refetchProducts }
                             </div>
                           </td>
                           <td><strong>${Number(o.total).toFixed(2)}</strong></td>
+                          <td>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                              fontSize: '0.8rem', fontWeight: 600, padding: '3px 8px',
+                              borderRadius: '999px',
+                              backgroundColor:
+                                o.paymentMethod === 'bkash' ? 'rgba(220, 38, 38, 0.12)' :
+                                o.paymentMethod === 'cod' ? 'rgba(245, 158, 11, 0.12)' :
+                                'rgba(59, 130, 246, 0.12)',
+                              color:
+                                o.paymentMethod === 'bkash' ? '#dc2626' :
+                                o.paymentMethod === 'cod' ? '#d97706' :
+                                '#3b82f6',
+                            }}>
+                              {o.paymentMethod === 'bkash' && '📱 bKash'}
+                              {o.paymentMethod === 'cod' && '💵 COD'}
+                              {(!o.paymentMethod || o.paymentMethod === 'card') && '💳 Card'}
+                            </span>
+                          </td>
                           <td>
                             <span className={`admin-category-badge`} style={{
                               backgroundColor: 

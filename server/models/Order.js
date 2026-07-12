@@ -137,6 +137,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    paymentMethod: {
+      type: String,
+      enum: ['card', 'cod', 'bkash'],
+      default: 'card',
+    },
     isPaid: {
       type: Boolean,
       default: false,

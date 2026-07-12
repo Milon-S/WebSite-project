@@ -21,12 +21,14 @@ export default function Checkout({
     state: '',
     zip: '',
     cardname: '',
+    bkashTrxId: '',
   });
 
   const [errors, setErrors] = useState({});
   const [cardFocused, setCardFocused] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
   const [cardError, setCardError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('card');
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -73,15 +75,21 @@ export default function Checkout({
     }
 
     // Required fields
-    const reqFields = ['firstname', 'lastname', 'address', 'city', 'state', 'zip', 'cardname'];
+    const reqFields = ['firstname', 'lastname', 'address', 'city', 'state', 'zip'];
+    if (paymentMethod === 'card') {
+      reqFields.push('cardname');
+    } else if (paymentMethod === 'bkash') {
+      reqFields.push('bkashTrxId');
+    }
+    
     reqFields.forEach((field) => {
       if (!formData[field] || formData[field].trim().length === 0) {
         newErrors[field] = true;
       }
     });
 
-    // Validate Stripe card details if not in mock mode
-    if (!USE_MOCK && !cardComplete) {
+    // Validate Stripe card details if not in mock mode and using card
+    if (paymentMethod === 'card' && !USE_MOCK && !cardComplete) {
       if (!cardError) {
         setCardError('Please enter complete credit card details.');
       }
@@ -127,7 +135,7 @@ export default function Checkout({
     e.preventDefault();
     if (!validateForm()) return;
 
-    if (!USE_MOCK && (!stripe || !elements)) {
+    if (paymentMethod === 'card' && !USE_MOCK && (!stripe || !elements)) {
       setOrderError('Stripe has not loaded yet. Please try again in a moment.');
       return;
     }
@@ -138,7 +146,11 @@ export default function Checkout({
     try {
       let paymentIntentId = '';
 
-      if (!USE_MOCK) {
+      if (paymentMethod === 'cod') {
+        paymentIntentId = `cod_${Date.now()}`;
+      } else if (paymentMethod === 'bkash') {
+        paymentIntentId = `bkash_${formData.bkashTrxId}`;
+      } else if (!USE_MOCK) {
         // 1. Create PaymentIntent on the backend
         const response = await fetch('/api/payments/payment-intent', {
           method: 'POST',
@@ -189,6 +201,7 @@ export default function Checkout({
       await onOrderPlaced({
         ...formData,
         paymentIntentId,
+        paymentMethod,
       });
 
       // Clear local states on success
@@ -201,9 +214,10 @@ export default function Checkout({
         state: '',
         zip: '',
         cardname: '',
+        bkashTrxId: '',
       });
 
-      if (!USE_MOCK) {
+      if (paymentMethod === 'card' && !USE_MOCK) {
         const cardElement = elements.getElement(CardElement);
         if (cardElement) {
           cardElement.clear();
@@ -345,38 +359,102 @@ export default function Checkout({
               {/* Payment Details */}
               <div className="form-group-wrapper">
                 <h3>Payment Details</h3>
-                <div className={`form-group ${errors.cardname ? 'invalid' : ''}`}>
-                  <label htmlFor="checkout-cardname">
-                    Name on Card <span className="required">*</span>
+                
+                <div className="payment-method-selector" style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="card"
+                      checked={paymentMethod === 'card'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    <span style={{ fontWeight: paymentMethod === 'card' ? '600' : '400' }}>Credit Card</span>
                   </label>
-                  <input
-                    type="text"
-                    id="checkout-cardname"
-                    required
-                    placeholder="John Doe"
-                    value={formData.cardname}
-                    onChange={handleInputChange}
-                  />
-                  <span className="error-msg">Required.</span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    <span style={{ fontWeight: paymentMethod === 'cod' ? '600' : '400' }}>Cash on Delivery</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="bkash"
+                      checked={paymentMethod === 'bkash'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    />
+                    <span style={{ fontWeight: paymentMethod === 'bkash' ? '600' : '400' }}>bKash</span>
+                  </label>
                 </div>
-                {!USE_MOCK ? (
-                  <div className={`form-group ${errors.card ? 'invalid' : ''}`}>
-                    <label>
-                      Card Information <span className="required">*</span>
+
+                {paymentMethod === 'bkash' && (
+                  <div className={`form-group ${errors.bkashTrxId ? 'invalid' : ''}`}>
+                    <label htmlFor="checkout-bkashTrxId">
+                      bKash Transaction ID <span className="required">*</span>
                     </label>
-                    <div className={`stripe-card-element-container ${cardFocused ? 'focused' : ''} ${cardError ? 'invalid' : ''}`}>
-                      <CardElement
-                        options={cardElementOptions}
-                        onChange={handleCardChange}
-                        onFocus={() => setCardFocused(true)}
-                        onBlur={() => setCardFocused(false)}
-                      />
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      Please send the total amount to our bKash number: <b>01786513661</b> and enter the Transaction ID below.
                     </div>
-                    {cardError && <span className="error-msg" style={{ display: 'block' }}>{cardError}</span>}
+                    <input
+                      type="text"
+                      id="checkout-bkashTrxId"
+                      required={paymentMethod === 'bkash'}
+                      placeholder="e.g. 8NX1XXXXXXXX"
+                      value={formData.bkashTrxId}
+                      onChange={handleInputChange}
+                    />
+                    <span className="error-msg">Required.</span>
                   </div>
-                ) : (
-                  <div className="promo-message success" style={{ marginBottom: '1.5rem', padding: '12px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
-                    <i className="fa-solid fa-circle-check"></i> Mock checkout mode is active. Click "Place Order" to verify.
+                )}
+
+                {paymentMethod === 'card' && (
+                  <>
+                    <div className={`form-group ${errors.cardname ? 'invalid' : ''}`}>
+                      <label htmlFor="checkout-cardname">
+                        Name on Card <span className="required">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="checkout-cardname"
+                        required={paymentMethod === 'card'}
+                        placeholder="John Doe"
+                        value={formData.cardname}
+                        onChange={handleInputChange}
+                      />
+                      <span className="error-msg">Required.</span>
+                    </div>
+                    {!USE_MOCK ? (
+                      <div className={`form-group ${errors.card ? 'invalid' : ''}`}>
+                        <label>
+                          Card Information <span className="required">*</span>
+                        </label>
+                        <div className={`stripe-card-element-container ${cardFocused ? 'focused' : ''} ${cardError ? 'invalid' : ''}`}>
+                          <CardElement
+                            options={cardElementOptions}
+                            onChange={handleCardChange}
+                            onFocus={() => setCardFocused(true)}
+                            onBlur={() => setCardFocused(false)}
+                          />
+                        </div>
+                        {cardError && <span className="error-msg" style={{ display: 'block' }}>{cardError}</span>}
+                      </div>
+                    ) : (
+                      <div className="promo-message success" style={{ marginBottom: '1.5rem', padding: '12px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--success-bg)', border: '1px solid var(--success)' }}>
+                        <i className="fa-solid fa-circle-check"></i> Mock checkout mode is active. Click "Place Order" to verify.
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {paymentMethod === 'cod' && (
+                  <div className="promo-message" style={{ marginBottom: '1.5rem', padding: '12px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                    <i className="fa-solid fa-truck"></i> You have selected Cash on Delivery. You will pay when your order is delivered.
                   </div>
                 )}
               </div>
